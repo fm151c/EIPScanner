@@ -64,6 +64,10 @@ namespace eipScanner {
          */
         void setSendDataListener(SendDataHandle handle);
 
+        void print();
+
+        void print_o2tSequenceNumber();
+
 	private:
 		IOConnection();
 		void notifyReceiveData(const std::vector<uint8_t> &data);

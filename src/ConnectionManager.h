@@ -54,6 +54,15 @@ namespace eipScanner {
 		 */
 		IOConnection::WPtr largeForwardOpen(const SessionInfoIf::SPtr& si, cip::connectionManager::ConnectionParameters connectionParameters);
 
+        IOConnection::WPtr forwardOpenWithIOParams(const SessionInfoIf::SPtr& si,
+                cip::connectionManager::ConnectionParameters connectionParameters,
+                cip::CipUdint o2tNetworkConnectionId,
+                cip::CipUdint t2oNetworkConnectionId,
+                cip::CipUdint o2tAPI,
+                cip::CipUdint t2oAPI,
+                cip::CipUdint serialNumber,
+                cip::CipUdint o2tSeqNum,
+                bool isLarge = false);
 
 		/**
 		 * @brief Closes an EIP IO connection

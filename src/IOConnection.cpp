@@ -8,6 +8,7 @@
 #include "cip/connectionManager/NetworkConnectionParams.h"
 #include "utils/Buffer.h"
 #include "utils/Logger.h"
+#include <stdio.h>
 
 namespace eipScanner {
 	using utils::Logger;
@@ -140,4 +141,22 @@ namespace eipScanner {
 
 		return true;
 	}
+    void IOConnection::print() {
+        printf("==========================================================\n");
+        printf("o2tNetworkConnectionId: %u\n"
+                "t2oNetworkConnectionId: %u\n"
+                "o2tAPI: %u\n"
+                "t2oAPI: %u\n"
+                "serialNumber: %u\n",
+                _o2tNetworkConnectionId,
+                _t2oNetworkConnectionId,
+                _o2tAPI,
+                _t2oAPI,
+                _serialNumber);
+        printf("==========================================================\n");
+    }
+
+    void IOConnection::print_o2tSequenceNumber() {
+        printf("o2tSequenceNumber: [%u]\n", _o2tSequenceNumber);
+    }
 }

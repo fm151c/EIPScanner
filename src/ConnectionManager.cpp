@@ -172,6 +172,62 @@ namespace eipScanner {
 		return forwardOpen(si, connectionParameters, true);
 	}
 
+    IOConnection::WPtr ConnectionManager::forwardOpenWithIOParams(const SessionInfoIf::SPtr& si,
+            cip::connectionManager::ConnectionParameters connectionParameters,
+            cip::CipUdint o2tNetworkConnectionId,
+            cip::CipUdint t2oNetworkConnectionId,
+            cip::CipUdint o2tAPI,
+            cip::CipUdint t2oAPI,
+            cip::CipUdint serialNumber,
+            cip::CipUdint o2tSeqNum,
+            bool isLarge) {
+        static int serialNumberCount = 0;
+        connectionParameters.connectionSerialNumber = ++serialNumberCount;
+
+        NetworkConnectionParametersBuilder o2tNCP(connectionParameters.o2tNetworkConnectionParams, isLarge);
+        NetworkConnectionParametersBuilder t2oNCP(connectionParameters.t2oNetworkConnectionParams, isLarge);
+
+        auto o2tSize = o2tNCP.getConnectionSize();
+        auto t2oSize = t2oNCP.getConnectionSize();
+
+        IOConnection::SPtr ioConnection;
+
+        ioConnection.reset(new IOConnection());
+        ioConnection->_o2tNetworkConnectionId = o2tNetworkConnectionId;
+        ioConnection->_t2oNetworkConnectionId = t2oNetworkConnectionId;
+        ioConnection->_o2tAPI = o2tAPI;
+        ioConnection->_t2oAPI = t2oAPI;
+        ioConnection->_serialNumber = serialNumber;
+        ioConnection->_o2tSequenceNumber = o2tSeqNum;
+
+        ioConnection->_connectionTimeoutMultiplier = 4 << connectionParameters.connectionTimeoutMultiplier;
+        ioConnection->_transportTypeTrigger = connectionParameters.transportTypeTrigger;
+        ioConnection->_o2tRealTimeFormat = connectionParameters.o2tRealTimeFormat;
+        ioConnection->_t2oRealTimeFormat = connectionParameters.t2oRealTimeFormat;
+        ioConnection->_connectionPath = connectionParameters.connectionPath;
+        ioConnection->_originatorVendorId = connectionParameters.originatorVendorId;
+        ioConnection->_originatorSerialNumber = connectionParameters.originatorSerialNumber;
+
+        ioConnection->_o2tDataSize = o2tSize;
+        ioConnection->_t2oDataSize = t2oSize;
+        ioConnection->_o2tFixedSize = (o2tNCP.getType() == NetworkConnectionParametersBuilder::FIXED);
+        ioConnection->_t2oFixedSize = (t2oNCP.getType() == NetworkConnectionParametersBuilder::FIXED);
+
+        ioConnection->_socket = std::make_unique<UDPSocket>(si->getRemoteEndPoint().getHost(), EIP_DEFAULT_IMPLICIT_PORT);
+
+        findOrCreateSocket(sockets::EndPoint(si->getRemoteEndPoint().getHost(), EIP_DEFAULT_IMPLICIT_PORT));
+
+        auto result = _connectionMap
+            .insert(std::make_pair(ioConnection->_t2oNetworkConnectionId, ioConnection));
+        if (!result.second) {
+            Logger(LogLevel::ERROR)
+                << "Connection with T2O_ID=" << ioConnection->_t2oNetworkConnectionId
+                << " already exists.";
+        }
+
+        return ioConnection;
+    }
+
 	void ConnectionManager::forwardClose(const SessionInfoIf::SPtr& si, const IOConnection::WPtr& ioConnection) {
 		if (auto ptr = ioConnection.lock()) {
 			ForwardCloseRequest request;

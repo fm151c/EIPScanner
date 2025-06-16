@@ -10,7 +10,6 @@
 #include "utils/Buffer.h"
 #include <stdio.h>
 #include <unistd.h>
-#include <signal.h>
 
 using namespace eipScanner::cip;
 using eipScanner::SessionInfo;
@@ -23,27 +22,13 @@ using eipScanner::utils::Buffer;
 using eipScanner::utils::Logger;
 using eipScanner::utils::LogLevel;
 
-
-// Implicit messaging
-ConnectionManager conn_m;
-std::shared_ptr<SessionInfo> si;
-IOConnection::WPtr io;
-
-extern "C"
-void signal_handler(int signum) {
-  (void) signum;
-
-  conn_m.forwardClose(si, io);
-  exit(0);
-}
-
 int main() {
-
-  signal(SIGINT, signal_handler);
-
   Logger::setLogLevel(LogLevel::DEBUG);
 
-  si = std::make_shared<SessionInfo>("192.168.1.26", 0xAF12);
+  auto si = std::make_shared<SessionInfo>("192.168.1.26", 0xAF12);
+
+  // Implicit messaging
+  ConnectionManager connectionManager;
 
   ConnectionParameters parameters;
   parameters.connectionPath = {0x20, 0x04, 0x24, 0x97, 0x2C, 0x96, 0x2C, 0x64};  // config Assm151, output Assm150, intput Assm100
@@ -62,7 +47,9 @@ int main() {
   parameters.t2oRPI = 1000 * 1000;
   parameters.transportTypeTrigger |= NetworkConnectionParams::CLASS1;
 
-  io = conn_m.forwardOpen(si, parameters);
+  IOConnection::WPtr io = connectionManager.forwardOpenWithIOParams(
+          si, parameters,
+          137625620, 3046309889, 1000000, 1000000, 1, 50);
   auto ptr = io.lock();
   ptr->print();
 
@@ -84,8 +71,9 @@ int main() {
 
   int count = 100000;
   std::vector<uint8_t> data(32);
-  while (conn_m.hasOpenConnections() && count-- > 0) {
-    data[0] += 1;
+  while (connectionManager.hasOpenConnections() && count-- > 0) {
+    data[1] += 1;
+    // printf("S: [%x]\n", data[0]);
     // printf("S: ");
     // for (auto &byte: data) {
     //   printf("[%x]", byte);
@@ -93,12 +81,12 @@ int main() {
     // printf("\n");
     ptr->setDataToSend(data);
     printf("----------------------------------------------------------\n");
-    conn_m.handleConnections(std::chrono::milliseconds(0));
+    connectionManager.handleConnections(std::chrono::milliseconds(0));
     ptr->print_o2tSequenceNumber();
     sleep(1);
   }
 
-  conn_m.forwardClose(si, io);
+  connectionManager.forwardClose(si, io);
 
   return 0;
 }
